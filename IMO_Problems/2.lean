@@ -27,10 +27,10 @@ theorem Step1 (hm : 0 < m) :
       simp [t1, t2]
       norm_num
 
-lemma v5eqzero : ¬ (5 : ℕ) ∣ ∏ k ∈ Finset.Icc 1 m, 2 ^ (2 * k + 1) := by
+lemma v5eqzero : ¬ (5 : ℕ) ∣ ∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1) := by
   induction' m with m ih
   · simp
-  · rw [Finset.prod_Icc_succ_top (by norm_num)]
+  · rw [prod_Icc_succ_top (by norm_num)]
     intro five_div_prod
     have fivenotdvd2pow: ¬ 5 ∣ 2 ^ (2 * (m + 1) + 1) := fun hx5 ↦ by
       have (h5: Nat.Prime 5): 5 ∣ 2 := Nat.Prime.dvd_of_dvd_pow Nat.prime_five hx5
@@ -38,50 +38,32 @@ lemma v5eqzero : ¬ (5 : ℕ) ∣ ∏ k ∈ Finset.Icc 1 m, 2 ^ (2 * k + 1) := b
     have := Prime.not_dvd_mul (Nat.prime_iff.mp (by norm_num)) ih fivenotdvd2pow
     contradiction
 
+lemma imp {a : ℕ} (ha : a ∈ Icc 1 m) : a ≠ 0 := by simp at ha; linarith
+
 theorem Step2_1 : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5=
     Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * k + 1)) 5 := by
   have pow_eq: ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1) =
       ∏ k ∈ Icc 1 m,  2 ^ (2 * k + 1) * k ^ (2 * k + 1) := by
     congr; ext k; exact Nat.mul_pow 2 k (2 * k + 1)
-  have prod_fg: ∏ k ∈ Finset.Icc 1 m, (2 * k) ^ (2 * k + 1) =
-      (∏ k ∈ Finset.Icc 1 m, 2 ^ (2 * k + 1)) * (∏ k ∈ Finset.Icc 1 m, k ^ (2 * k + 1)):= by
+  have prod_fg: ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1) =
+      (∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1)) * (∏ k ∈ Icc 1 m, k ^ (2 * k + 1)):= by
     rw [pow_eq]
     exact prod_mul_distrib
   have : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) =
-      Nat.factorization (∏ k ∈ Finset.Icc 1 m, 2 ^ (2 * k + 1)) +
-      Nat.factorization (∏ k ∈ Finset.Icc 1 m,  k ^ (2 * k + 1)) := by
+      Nat.factorization (∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1)) +
+      Nat.factorization (∏ k ∈ Icc 1 m,  k ^ (2 * k + 1)) := by
       rw [prod_fg, Nat.factorization_mul]
-      · rw [Finset.prod_ne_zero_iff]
+      · rw [prod_ne_zero_iff]
         exact fun a a_1 => Ne.symm (NeZero.ne' (2 ^ (2 * a + 1)))
-      · rw [Finset.prod_ne_zero_iff]
-        intro a ha
-        simp at ha
-        exact pow_ne_zero (2 * a + 1) (by linarith)
-  rw [this, Finsupp.add_apply]
-  refine Nat.add_eq_right.mpr ?_
+      · rw [prod_ne_zero_iff]
+        exact fun a ha ↦ pow_ne_zero (2 * a + 1) (imp ha)
+  rw [this, Finsupp.add_apply, Nat.add_eq_right]
   simp [Nat.factorization_eq_zero_iff , v5eqzero]
 
-lemma powk_dvd_powm : (∏ k ∈ Finset.Icc 1 m, k ^ (2 * k + 1)) ∣
-    (∏ k ∈ Finset.Icc 1 m, k ^ (2 * m + 1)) := by
+lemma powk_dvd_powm : (∏ k ∈ Icc 1 m, k ^ (2 * k + 1)) ∣
+    (∏ k ∈ Icc 1 m, k ^ (2 * m + 1)) := by
   apply Finset.prod_dvd_prod_of_dvd
-  intro i ih
-  simp only [Finset.mem_Icc] at ih
-  have ipow_le_mpow : 2 * i + 1 ≤ 2* m +1 := by linarith
-  apply pow_dvd_pow i ipow_le_mpow
-
-lemma kpow_neqz : ∏ k ∈ Finset.Icc 1 m, k ^ (2 * k + 1) ≠ 0 := by
-  rw [Finset.prod_ne_zero_iff]
-  intro a ha
-  refine pow_ne_zero (2 * a + 1) ?_
-  simp at ha
-  linarith
-
-lemma mpow_neqz : ∏ k ∈ Finset.Icc 1 m, k ^ (2 * m + 1) ≠ 0 := by
-  rw [Finset.prod_ne_zero_iff]
-  intro a ha
-  refine pow_ne_zero (2 * m + 1) ?_
-  simp at ha
-  linarith
+  exact fun i ih ↦ pow_dvd_pow i (by simp at ih; linarith)
 
 lemma le (hm : 0 < m) : (((2 * m + 1) * m.factorial.factorization 5 : ℕ) : ℝ) ≤ (m ^ 2 : ℕ) := by
   have eq : 4 * (m.factorial).factorization 5 ≤ m := by -- in ℕ
@@ -113,10 +95,13 @@ theorem Step2 (hm : 0 < m) : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 
     ≤ Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 2 := by calc
   _ = Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * k + 1)) 5 := Step2_1
   _ ≤ Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * m + 1)) 5 :=
+    have kpow_neqz : ∏ k ∈ Icc 1 m, k ^ (2 * k + 1) ≠ 0 := by
+      simpa only [prod_ne_zero_iff] using fun a ha ↦ pow_ne_zero (2 * a + 1) (imp ha)
+    have mpow_neqz : ∏ k ∈ Icc 1 m, k ^ (2 * m + 1) ≠ 0 := by
+      simpa only [prod_ne_zero_iff] using fun a ha ↦ pow_ne_zero (2 * m + 1) (imp ha)
     (Nat.factorization_le_iff_dvd kpow_neqz mpow_neqz).mpr powk_dvd_powm 5
   _ = (2 * m + 1) * (m.factorial).factorization 5 := by
-    rw [Finset.prod_pow, Nat.factorization_pow, ← Finset.prod_Ico_id_eq_factorial]
-    exact rfl
+    simpa only [prod_pow, Nat.factorization_pow, ← Finset.prod_Ico_id_eq_factorial] using by rfl
   _ ≤ m ^ 2 := Nat.cast_le.mp (le hm)
   _ ≤ _ := by
     sorry
