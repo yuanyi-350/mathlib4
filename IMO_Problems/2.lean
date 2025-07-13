@@ -91,6 +91,42 @@ lemma le (hm : 0 < m) : (((2 * m + 1) * m.factorial.factorization 5 : ℕ) : ℝ
       linarith
     _ = _ := by simp
 
+theorem sum_icc_id: ∑ k ∈ Icc 1 m, (2 * k + 1) = m ^ 2 + 2 * m := by
+  induction' m  with m ih
+  · simp
+  · rw [Finset.sum_Icc_succ_top (by norm_num), ih, add_sq]
+    ring
+
+lemma v2ge: Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 2 ≥ m ^ 2:= by
+  have powk_dvd_pow2k : (∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1)) ∣
+      (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) := by
+    apply Finset.prod_dvd_prod_of_dvd
+    intro i ih
+    simp only [Finset.mem_Icc] at ih
+    apply pow_dvd_pow_of_dvd (Nat.dvd_mul_right 2 i)
+  have pow_neqz: ∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1) ≠ 0 := by
+    rw [Finset.prod_ne_zero_iff]
+    exact fun a ha ↦ pow_ne_zero (2 * a + 1) (by norm_num)
+  have kpow_neqz: ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1) ≠ 0 := by
+    rw [Finset.prod_ne_zero_iff]
+    intro a ha
+    refine pow_ne_zero (2 * a + 1) ?_
+    simp at ha
+    linarith
+  have step1: Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 2 ≥
+      Nat.factorization (∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1)) 2 := by
+    exact (Nat.factorization_le_iff_dvd pow_neqz kpow_neqz).mpr  (powk_dvd_pow2k) 2
+  have step2: (∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1)).factorization 2
+      = ∑ k ∈ Icc 1 m, (2 * k + 1) := by
+    rw [Finset.prod_pow_eq_pow_sum]
+    have : Nat.factorization 2 2 = 1 := by norm_num
+    simp [this]
+  calc
+    _ ≥ Nat.factorization (∏ k ∈ Icc 1 m, 2 ^ (2 * k + 1)) 2 := step1
+    _ ≥ _ := by
+      rw [step2, sum_icc_id]
+      linarith
+
 theorem Step2 (hm : 0 < m) : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5
     ≤ Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 2 := by calc
   _ = Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * k + 1)) 5 := Step2_1
@@ -103,5 +139,4 @@ theorem Step2 (hm : 0 < m) : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 
   _ = (2 * m + 1) * (m.factorial).factorization 5 := by
     simpa only [prod_pow, Nat.factorization_pow, ← Finset.prod_Ico_id_eq_factorial] using by rfl
   _ ≤ m ^ 2 := Nat.cast_le.mp (le hm)
-  _ ≤ _ := by
-    sorry
+  _ ≤ _ := v2ge
