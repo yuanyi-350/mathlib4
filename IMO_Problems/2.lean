@@ -4,11 +4,15 @@ open Finset
 
 variable {m : ℕ}
 
+open Finset
+
+variable {m : ℕ}
+
 theorem Step1 (hm : 0 < m) :
     (Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5) =
     ∑ k ∈ Icc 1 m, (2 * k + 1) * Nat.factorization k 5 := by
     induction hm using Nat.leRec with
-    | refl => simp [Nat.factorization_eq_zero_iff 8 5]
+    | refl => simp [Nat.factorization_eq_zero_iff 8 5]; norm_num
     | @le_succ_of_le k hm ih =>
       have k1tok : ∏ k ∈ Icc 1 (k + 1), (2 * k) ^ (2 * k + 1)
         = (∏ k ∈ Icc 1 k, (2 * k) ^ (2 * k + 1)) * (2 * k + 2) ^ (2 * k + 3) := by
@@ -120,21 +124,52 @@ lemma v2ge: Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 2 ≥ m
       rw [step2, sum_icc_id]
       linarith
 
-theorem Step2 (hm : 0 < m) : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5
-    ≤ Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 2 := by calc
-  _ = Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * k + 1)) 5 := Step2_1
-  _ ≤ Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * m + 1)) 5 :=
-    have kpow_neqz : ∏ k ∈ Icc 1 m, k ^ (2 * k + 1) ≠ 0 := by
-      simpa only [prod_ne_zero_iff] using fun a ha ↦ pow_ne_zero (2 * a + 1) (imp ha)
-    have mpow_neqz : ∏ k ∈ Icc 1 m, k ^ (2 * m + 1) ≠ 0 := by
-      simpa only [prod_ne_zero_iff] using fun a ha ↦ pow_ne_zero (2 * m + 1) (imp ha)
-    (Nat.factorization_le_iff_dvd kpow_neqz mpow_neqz).mpr powk_dvd_powm 5
-  _ = (2 * m + 1) * (m.factorial).factorization 5 := by
-    simpa only [prod_pow, Nat.factorization_pow, ← Finset.prod_Ico_id_eq_factorial] using by rfl
-  _ ≤ m ^ 2 := Nat.cast_le.mp (le hm)
-  _ ≤ _ := v2ge
+theorem Step2 : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5
+    ≤ Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 2 := by
+  rcases Nat.eq_zero_or_pos m with ch | hm
+  · simp [ch]
+  ·   calc
+    _ = Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * k + 1)) 5 := Step2_1
+    _ ≤ Nat.factorization (∏ k ∈ Icc 1 m, k ^ (2 * m + 1)) 5 :=
+      have kpow_neqz : ∏ k ∈ Icc 1 m, k ^ (2 * k + 1) ≠ 0 := by
+        simpa only [prod_ne_zero_iff] using fun a ha ↦ pow_ne_zero (2 * a + 1) (imp ha)
+      have mpow_neqz : ∏ k ∈ Icc 1 m, k ^ (2 * m + 1) ≠ 0 := by
+        simpa only [prod_ne_zero_iff] using fun a ha ↦ pow_ne_zero (2 * m + 1) (imp ha)
+      (Nat.factorization_le_iff_dvd kpow_neqz mpow_neqz).mpr powk_dvd_powm 5
+    _ = (2 * m + 1) * (m.factorial).factorization 5 := by
+      simpa only [prod_pow, Nat.factorization_pow, ← Finset.prod_Ico_id_eq_factorial] using by rfl
+    _ ≤ m ^ 2 := Nat.cast_le.mp (le hm)
+    _ ≤ _ := v2ge
 
 theorem main {l : ℕ} (hl1 : 10 ^ l ∣ ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1))
     (hl2 : ¬ 10 ^ (l + 1) ∣ ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) :
     l = Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5 := by
-  sorry
+  have : Nat.factorization (5 ^ l) ≤ Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) := by
+    refine (Nat.factorization_le_iff_dvd (Ne.symm (NeZero.ne' (5 ^ l))) ?_).mpr
+      (Nat.dvd_trans (pow_dvd_pow_of_dvd (by norm_num) l) hl1)
+    rw [prod_ne_zero_iff]
+    exact fun a ha ↦ pow_ne_zero (2 * a + 1) (by simp at ha; linarith)
+  have le : Nat.factorization (5 ^ l) 5
+      ≤ Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5 := this 5
+  have eq : Nat.factorization (5 ^ l) 5 = l := by simp; norm_num
+  rw [eq] at le
+  have ge : Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5 ≤ l := by
+    by_contra! nh
+    have : l + 1 ≤ Nat.factorization (∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1)) 5 := by omega
+    have dvd1 : 5 ^ (l + 1) ∣ ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1) := by
+      refine (Nat.Prime.pow_dvd_iff_dvd_ordProj Nat.prime_five ?_).mpr
+        (Nat.pow_dvd_pow_iff_le_right'.mpr nh)
+      rw [prod_ne_zero_iff]
+      exact fun a ha ↦ pow_ne_zero (2 * a + 1) (by simp at ha; linarith)
+    have dvd2 : 2 ^ (l + 1) ∣ ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1) := by
+      refine (Nat.Prime.pow_dvd_iff_dvd_ordProj Nat.prime_two ?_).mpr ?_
+      rw [prod_ne_zero_iff]
+      exact fun a ha ↦ pow_ne_zero (2 * a + 1) (by simp at ha; linarith)
+      refine Nat.pow_dvd_pow_iff_le_right'.mpr ?_
+      linarith [Step2 (m := m)]
+    have : 5 ^ (l + 1) * 2 ^ (l + 1) ∣ ∏ k ∈ Icc 1 m, (2 * k) ^ (2 * k + 1) := by
+      refine Nat.Coprime.mul_dvd_of_dvd_of_dvd ?_ dvd1 dvd2
+      simpa using Odd.pow (Nat.odd_iff.mpr rfl)
+    rw [← Nat.mul_pow] at this
+    contradiction
+  exact Nat.le_antisymm le ge
